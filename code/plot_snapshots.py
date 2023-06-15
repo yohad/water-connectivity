@@ -12,6 +12,7 @@ Options:
 import h5py
 import numpy as np
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -22,7 +23,7 @@ def main(filename, start, count, output):
     """Save plot of specified tasks for given range of analysis writes."""
 
     # Plot settings
-    tasks = ['biomass', "soil_water", "surface_water"]
+    tasks = ['biomass', "flux"]
     scale = 2
     dpi = 200
     title_func = lambda sim_time: 't = {:.3f}'.format(sim_time)
@@ -38,14 +39,20 @@ def main(filename, start, count, output):
     fig = mfig.figure
     # Plot writes
     with h5py.File(filename, mode='r') as file:
-        for index in range(start, start+count):
+        for index in range(start, start + count):
             for n, task in enumerate(tasks):
                 # Build subfigure axes
                 i, j = divmod(n, ncols)
                 axes = mfig.add_axes(i, j, [0, 0, 1, 1])
                 # Call 3D plotting helper, slicing in time
                 dset = file['tasks'][task]
-                plot_tools.plot_bot_3d(dset, 0, index, axes=axes, title=task, even_scale=True, visible_axes=False)
+                plot_tools.plot_bot_3d(dset,
+                                       0,
+                                       index,
+                                       axes=axes,
+                                       title=task,
+                                       even_scale=True,
+                                       visible_axes=False)
             # Add time title
             title = title_func(file['scales/sim_time'][index])
             title_height = 1 - 0.5 * mfig.margin.top / mfig.fig.y
