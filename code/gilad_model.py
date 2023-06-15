@@ -1,7 +1,7 @@
 import numpy as np
 import dedalus.public as d3
 import logging
-from tqdm import tqdm
+from tqdm import tqdm, TqdmWarning
 
 from pathlib import Path
 
@@ -110,7 +110,11 @@ def run_gilad_model(
     f_w = infiltration * h - nu * (1 - rho * b) * w - Gw * w
     f_h = p - infiltration * h + delta_h * lap_h2
 
-    J = -2 * delta_h * h * dy(h)
+    J = -2 * delta_h * (h * dy(h) + h * m)
+
+    A = -d3.Integrate(1 / h, coords["y"])
+    AE = np.exp(m * A)
+    AT = m * AE / (1 - AE)
 
     # Problem
     problem = d3.IVP(
@@ -125,12 +129,13 @@ def run_gilad_model(
 
     problem.add_equation("dy(b)(y=Ly) = 0")
     problem.add_equation("dy(b)(y=0) = 0")
+
     problem.add_equation("dy(w)(y=Ly) = 0")
     problem.add_equation("dy(w)(y=0) = 0")
 
     problem.add_equation("dy(h)(y=Ly) = 0")
-    # problem.add_equation("h(y=Ly) = 0")
-    problem.add_equation("dy(dy(dy(h)))(y=0) = 0")
+    # problem.add_equation("dy(dy(h))(y=0) = 0")
+    problem.add_equation("dy(h)(y=0) = AT")
 
     # Solver
     solver = problem.build_solver(timestepper)
@@ -159,10 +164,11 @@ def run_gilad_model(
 
     # Main loop
     logger.info("Starting main loop")
-    progress_bar = tqdm(total=stop_sim_time, ncols=80)
+    total_steps = int(stop_sim_time / timestep)
+    progress_bar = tqdm(total=total_steps, ncols=80)
     while solver.proceed:
         solver.step(timestep)
-        progress_bar.update(timestep)
+        progress_bar.update(1)
     progress_bar.close()
 
 

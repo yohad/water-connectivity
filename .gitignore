@@ -3,3 +3,6 @@
 *.h5
 .vscode/
 __pycache__/
+frames/
+snapshots/
+
