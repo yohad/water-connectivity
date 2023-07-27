@@ -64,12 +64,12 @@ def main() -> None:
 
     args = parser.parse_args()
     run_gilad_model(
-        args.output,
-        args.length,
-        args.resolution,
-        args.time,
-        args.slope,
-        args.precipitation,
+        output=args.output,
+        length=args.length,
+        resolution=args.resolution,
+        sim_time=args.time,
+        slope=args.slope,
+        precipitation=args.precipitation,
     )
 
 

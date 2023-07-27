@@ -46,7 +46,7 @@ def run_gilad_model(
     gamma = 50 / 3
     delta_b = 1 / 30
     delta_w = 10 / 3
-    delta_h = 1e-2 / 3
+    delta_h = 1e-2
     a = 33.33
     q = 0.05
     f = 0.1
@@ -104,7 +104,7 @@ def run_gilad_model(
     grad_w = d3.Gradient(w) + ey * lift(tau_w1, -1)
     lap_w = d3.Divergence(grad_w)
 
-    lap_h2 = d3.Laplacian(h * h)
+    lap_h2 = d3.Laplacian(np.power(h, 2))
 
     f_b = Gb * b * (1 - b)
     f_w = infiltration * h - nu * (1 - rho * b) * w - Gw * w
@@ -127,14 +127,13 @@ def run_gilad_model(
         "dt(h) - 2 * delta_h * m * dy(h) + lift(tau_h1, -1) + lift(tau_h2, -2) = f_h"
     )
 
-    problem.add_equation("dy(b)(y=Ly) = 0")
+    problem.add_equation("dy(dy(b))(y=Ly) = 0")
     problem.add_equation("dy(b)(y=0) = 0")
 
-    problem.add_equation("dy(w)(y=Ly) = 0")
+    problem.add_equation("dy(dy(w))(y=Ly) = 0")
     problem.add_equation("dy(w)(y=0) = 0")
 
-    problem.add_equation("dy(h)(y=Ly) = 0")
-    # problem.add_equation("dy(dy(h))(y=0) = 0")
+    problem.add_equation("dy(dy(h))(y=Ly) = 0")
     problem.add_equation("dy(h)(y=0) = AT")
 
     # Solver
@@ -143,17 +142,19 @@ def run_gilad_model(
 
     # Initial Conditions
     b.fill_random(
-        "g", seed=42, distribution="normal", scale=1e-3
+        "g", seed=42, distribution="normal", scale=1e-6
     )  # Random noise
-    b["g"] = (b["g"]) ** 2  # Positive noise, noise is now of order 1e-6
+    b["g"] = np.abs(b["g"])  # Make sure it's positive
+    b["g"] += 0.2  # Add a constant
     w["g"] = p / nu
     h["g"] = p / a
 
     # Analysis
-    timestep = 0.01
-    snapshots_path = (f"{output}/snapshots/snapshots_p{p}_m{m}").replace(
-        ".", "_"
-    )
+    timestep = 1e-2
+
+    snapshots_dir = output / "snapshots"
+    snapshots_dir.mkdir(parents=True, exist_ok=True)
+    snapshots_path = (f"{snapshots_dir}/snapshots_p{p}_m{m}").replace(".", "_")
     snapshots = solver.evaluator.add_file_handler(
         snapshots_path, sim_dt=0.5, max_writes=500
     )
@@ -170,7 +171,3 @@ def run_gilad_model(
         solver.step(timestep)
         progress_bar.update(1)
     progress_bar.close()
-
-
-if __name__ == "__main__":
-    run_gilad_model()
